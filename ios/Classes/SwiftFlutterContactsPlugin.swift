@@ -42,6 +42,8 @@ public enum FlutterContacts {
                 CNContactSocialProfilesKey,
                 CNContactInstantMessageAddressesKey,
                 CNContactBirthdayKey,
+                CNContactNonGregorianBirthdayKey,
+                // CNContactRelationsKey,
                 CNContactDatesKey,
             ]
             if #available(iOS 10, *) {
@@ -230,6 +232,7 @@ public enum FlutterContacts {
             CNContactSocialProfilesKey,
             CNContactInstantMessageAddressesKey,
             CNContactBirthdayKey,
+            CNContactNonGregorianBirthdayKey,
             CNContactDatesKey,
             CNContactThumbnailImageDataKey,
             CNContactImageDataKey,

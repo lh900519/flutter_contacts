@@ -70,9 +70,15 @@ struct Contact {
             } + c.instantMessageAddresses.map {
                 SocialMedia(fromInstantMessage: $0)
             }
+        
             if c.birthday != nil {
                 events = [Event(fromContact: c)]
             }
+          
+            if c.nonGregorianBirthday != nil {
+              events += [Event(fromLunar: c)]
+            }
+          
             events += c.dates.map { Event(fromDate: $0) }
             // Notes need entitlements to be accessed in iOS 13+.
             // https://stackoverflow.com/questions/57442114/ios-13-cncontacts-no-longer-working-to-retrieve-all-contacts
