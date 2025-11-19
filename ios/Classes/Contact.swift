@@ -18,6 +18,7 @@ struct Contact {
     var notes: [Note] = []
     var accounts: [Account] = []
     var groups: [Group] = []
+    var relations: [Relation] = []
 
     init(fromMap m: [String: Any?]) {
         id = m["id"] as! String
@@ -39,6 +40,7 @@ struct Contact {
         notes = (m["notes"] as! [[String: Any]]).map { Note(fromMap: $0) }
         accounts = (m["accounts"] as! [[String: Any]]).map { Account(fromMap: $0) }
         groups = (m["groups"] as! [[String: Any]]).map { Group(fromMap: $0) }
+        relations = (m["relations"] as! [[String: Any]]).map { Relation(fromMap: $0) }
     }
 
     init(fromContact c: CNContact) {
@@ -85,6 +87,9 @@ struct Contact {
             if c.isKeyAvailable(CNContactNoteKey) {
                 notes = [Note(fromContact: c)]
             }
+          
+            relations = c.contactRelations.map { Relation(fromRelation: $0) }
+          
         }
         if c.isKeyAvailable(CNContactThumbnailImageDataKey) {
             thumbnail = c.thumbnailImageData
@@ -111,6 +116,7 @@ struct Contact {
         "notes": notes.map { $0.toMap() },
         "accounts": accounts.map { $0.toMap() },
         "groups": groups.map { $0.toMap() },
+        "relations": relations.map { $0.toMap() },
     ]
     }
 }

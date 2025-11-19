@@ -19,6 +19,7 @@ export 'properties/organization.dart';
 export 'properties/phone.dart';
 export 'properties/social_media.dart';
 export 'properties/website.dart';
+export 'properties/relation.dart';
 
 class FlutterContacts {
   static const _channel = MethodChannel('github.com/QuisApp/flutter_contacts');

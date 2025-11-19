@@ -121,12 +121,13 @@ class Event {
 
 /// Event labels.
 ///
-/// | Label       | Android | iOS |
-/// |-------------|:-------:|:---:|
-/// | anniversary | ✔       | ✔   |
-/// | birthday    | ✔       | ✔   |
-/// | other       | ✔       | ✔   |
-/// | custom      | ✔       | ✔   |
+/// | Label          | Android | iOS |
+/// |----------------|:-------:|:---:|
+/// | anniversary    | ✔       | ✔   |
+/// | birthday       | ✔       | ✔   |
+/// | other          | ✔       | ✔   |
+/// | custom         | ✔       | ✔   |
+/// | birthday_lunar |         | ✔   |
 enum EventLabel {
   anniversary,
   birthday,

@@ -108,6 +108,9 @@ class Contact {
   /// Events / birthdays.
   List<Event> events;
 
+  /// Relations.
+  List<Relation> relations;
+
   /// Notes.
   List<Note> notes;
 
@@ -146,6 +149,7 @@ class Contact {
     List<Note>? notes,
     List<Account>? accounts,
     List<Group>? groups,
+    List<Relation>? relations,
   })  : name = name ?? Name(),
         phones = phones ?? <Phone>[],
         emails = emails ?? <Email>[],
@@ -156,7 +160,8 @@ class Contact {
         events = events ?? <Event>[],
         notes = notes ?? <Note>[],
         accounts = accounts ?? <Account>[],
-        groups = groups ?? <Group>[];
+        groups = groups ?? <Group>[],
+        relations = relations ?? <Relation>[];
 
   factory Contact.fromJson(Map<String, dynamic> json) => Contact(
         id: (json['id'] as String?) ?? '',
@@ -195,6 +200,9 @@ class Contact {
         groups: ((json['groups'] as List?) ?? [])
             .map((x) => Group.fromJson(Map<String, dynamic>.from(x)))
             .toList(),
+        relations: ((json['relations'] as List?) ?? [])
+            .map((x) => Relation.fromJson(Map<String, dynamic>.from(x)))
+            .toList(),
       );
 
   Map<String, dynamic> toJson({
@@ -218,6 +226,7 @@ class Contact {
         'notes': notes.map((x) => x.toJson()).toList(),
         'accounts': accounts.map((x) => x.toJson()).toList(),
         'groups': groups.map((x) => x.toJson()).toList(),
+        'relations': relations.map((x) => x.toJson()).toList(),
       });
 
   @override
@@ -235,7 +244,8 @@ class Contact {
       _listHashCode(websites) ^
       _listHashCode(socialMedias) ^
       _listHashCode(events) ^
-      _listHashCode(notes);
+      _listHashCode(notes) ^
+      _listHashCode(relations);
 
   @override
   bool operator ==(Object o) =>
@@ -253,7 +263,8 @@ class Contact {
       _listEqual(o.websites, websites) &&
       _listEqual(o.socialMedias, socialMedias) &&
       _listEqual(o.events, events) &&
-      _listEqual(o.notes, notes);
+      _listEqual(o.notes, notes) &&
+      _listEqual(o.relations, relations);
 
   @override
   String toString() =>
@@ -261,7 +272,7 @@ class Contact {
       'photo=$photo, isStarred=$isStarred, name=$name, phones=$phones, '
       'emails=$emails, addresses=$addresses, organizations=$organizations, '
       'websites=$websites, socialMedias=$socialMedias, events=$events, '
-      'notes=$notes, accounts=$accounts, groups=$groups)';
+      'notes=$notes, accounts=$accounts, groups=$groups, relations=$relations)';
 
   /// Inserts the contact into the database.
   Future<Contact> insert() => FlutterContacts.insertContact(this);
@@ -333,6 +344,7 @@ class Contact {
       socialMedias.map((x) => x.toVCard()).expand((x) => x),
       events.map((x) => x.toVCard()).expand((x) => x),
       notes.map((x) => x.toVCard()).expand((x) => x),
+      relations.map((x) => x.toVCard()).expand((x) => x),
     ].expand((x) => x));
     lines.add('END:VCARD');
     return lines.join('\n');

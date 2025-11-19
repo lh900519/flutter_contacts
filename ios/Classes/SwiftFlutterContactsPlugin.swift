@@ -43,7 +43,7 @@ public enum FlutterContacts {
                 CNContactInstantMessageAddressesKey,
                 CNContactBirthdayKey,
                 CNContactNonGregorianBirthdayKey,
-                // CNContactRelationsKey,
+                CNContactRelationsKey,
                 CNContactDatesKey,
             ]
             if #available(iOS 10, *) {
@@ -234,6 +234,7 @@ public enum FlutterContacts {
             CNContactBirthdayKey,
             CNContactNonGregorianBirthdayKey,
             CNContactDatesKey,
+            CNContactRelationsKey,
             CNContactThumbnailImageDataKey,
             CNContactImageDataKey,
         ]
@@ -377,6 +378,7 @@ public enum FlutterContacts {
         contact.socialProfiles = []
         contact.instantMessageAddresses = []
         contact.dates = []
+        contact.contactRelations = []
         contact.birthday = nil
         if #available(iOS 13, *), !includeNotesOnIos13AndAbove {} else {
             contact.note = ""
@@ -409,6 +411,9 @@ public enum FlutterContacts {
         }
         (args["events"] as! [[String: Any]]).forEach {
             Event(fromMap: $0).addTo(contact)
+        }
+        (args["relations"] as! [[String: Any]]).forEach {
+            Relation(fromMap: $0).addTo(contact)
         }
         if #available(iOS 13, *), !includeNotesOnIos13AndAbove {} else {
             if let note = (args["notes"] as! [[String: Any]]).first {
