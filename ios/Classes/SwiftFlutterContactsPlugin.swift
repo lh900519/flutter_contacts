@@ -427,37 +427,62 @@ public enum FlutterContacts {
 }
 
 @available(iOS 9.0, *)
-public class SwiftFlutterContactsPlugin: NSObject, FlutterPlugin, FlutterStreamHandler, CNContactViewControllerDelegate, CNContactPickerDelegate {
-    private let rootViewController: UIViewController
+public class SwiftFlutterContactsPlugin: NSObject,
+    FlutterPlugin,
+    FlutterStreamHandler,
+    CNContactViewControllerDelegate,
+    CNContactPickerDelegate {
+
+    private weak var registrar: FlutterPluginRegistrar?
     private var externalResult: FlutterResult?
+
+    private var rootViewController: UIViewController? {
+        registrar?.viewController
+    }
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(
             name: "github.com/QuisApp/flutter_contacts",
             binaryMessenger: registrar.messenger()
         )
+
         let eventChannel = FlutterEventChannel(
             name: "github.com/QuisApp/flutter_contacts/events",
             binaryMessenger: registrar.messenger()
         )
-        let rootViewController = UIApplication.shared.delegate!.window!!.rootViewController!
-        let instance = SwiftFlutterContactsPlugin(rootViewController)
+
+        let instance = SwiftFlutterContactsPlugin(registrar: registrar)
+
         registrar.addMethodCallDelegate(instance, channel: channel)
         eventChannel.setStreamHandler(instance)
     }
 
-    init(_ rootViewController: UIViewController) {
-        self.rootViewController = rootViewController
+    init(registrar: FlutterPluginRegistrar) {
+        self.registrar = registrar
+    }
+
+    private func getRootViewControllerOrError(_ result: @escaping FlutterResult) -> UIViewController? {
+        guard let rootViewController = rootViewController else {
+            result(FlutterError(
+                code: "no_view_controller",
+                message: "No Flutter view controller available",
+                details: nil
+            ))
+            return nil
+        }
+        return rootViewController
     }
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
+
         case "requestPermission":
             DispatchQueue.global(qos: .userInteractive).async {
-                CNContactStore().requestAccess(for: .contacts, completionHandler: { (granted, _) -> Void in
+                CNContactStore().requestAccess(for: .contacts) { granted, _ in
                     result(granted)
-                })
+                }
             }
+
         case "select":
             DispatchQueue.global(qos: .userInteractive).async {
                 let args = call.arguments as! [Any?]
@@ -590,10 +615,16 @@ public class SwiftFlutterContactsPlugin: NSObject, FlutterPlugin, FlutterStreamH
                     ))
                 }
             }
+
         case "openExternalViewOrEdit":
             DispatchQueue.main.async {
+                guard let rootViewController = self.getRootViewControllerOrError(result) else {
+                    return
+                }
+
                 let args = call.arguments as! [Any?]
                 let id = args[0] as! String
+
                 let contacts = FlutterContacts.selectInternal(
                     store: CNContactStore(),
                     id: id,
@@ -615,19 +646,33 @@ public class SwiftFlutterContactsPlugin: NSObject, FlutterPlugin, FlutterStreamH
                     contactView.delegate = self
                     // https://stackoverflow.com/a/39594589
                     let navigationController = UINavigationController(rootViewController: contactView)
-                    self.rootViewController.present(navigationController, animated: true, completion: nil)
+                    rootViewController.present(navigationController, animated: true)
+
                     self.externalResult = result
+                } else {
+                    result(nil)
                 }
             }
+
         case "openExternalPick":
             DispatchQueue.main.async {
+                guard let rootViewController = self.getRootViewControllerOrError(result) else {
+                    return
+                }
+
                 let contactPicker = CNContactPickerViewController()
                 contactPicker.delegate = self
-                self.rootViewController.present(contactPicker, animated: true, completion: nil)
+
+                rootViewController.present(contactPicker, animated: true)
                 self.externalResult = result
             }
+
         case "openExternalInsert":
             DispatchQueue.main.async {
+                guard let rootViewController = self.getRootViewControllerOrError(result) else {
+                    return
+                }
+
                 let contact = CNMutableContact()
                 let args = call.arguments as? [Any?]
                 // Check if we have contact data to insert
@@ -647,7 +692,8 @@ public class SwiftFlutterContactsPlugin: NSObject, FlutterPlugin, FlutterStreamH
                 contactView.delegate = self
                 // https://stackoverflow.com/a/39594589
                 let navigationController = UINavigationController(rootViewController: contactView)
-                self.rootViewController.present(navigationController, animated: true, completion: nil)
+                rootViewController.present(navigationController, animated: true)
+
                 self.externalResult = result
             }
         default:
@@ -673,24 +719,30 @@ public class SwiftFlutterContactsPlugin: NSObject, FlutterPlugin, FlutterStreamH
         return nil
     }
 
-    public func contactViewController(_ viewController: CNContactViewController, didCompleteWith contact: CNContact?) {
+    public func contactViewController(
+        _ viewController: CNContactViewController,
+        didCompleteWith contact: CNContact?
+    ) {
         if let result = externalResult {
             result(contact?.identifier)
             externalResult = nil
         }
-        viewController.dismiss(animated: true, completion: nil)
+
+        viewController.dismiss(animated: true)
     }
 
     @objc func contactViewControllerDidCancel() {
         if let result = externalResult {
-            let viewController: UIViewController? = UIApplication.shared.delegate?.window??.rootViewController
-            viewController?.dismiss(animated: true, completion: nil)
+            rootViewController?.dismiss(animated: true)
             result(nil)
             externalResult = nil
         }
     }
 
-    public func contactPicker(_: CNContactPickerViewController, didSelect contact: CNContact) {
+    public func contactPicker(
+        _: CNContactPickerViewController,
+        didSelect contact: CNContact
+    ) {
         if let result = externalResult {
             result(contact.identifier)
             externalResult = nil
