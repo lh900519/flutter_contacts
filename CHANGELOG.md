@@ -1,4 +1,4 @@
-## Unreleased (fork)
+## 1.2.1
 
 * iOS: 读取非公历生日不再使用 `Calendar.Identifier.debugDescription`（iOS 15/16 的 Foundation 不提供该符号，以 iOS 15+ 为部署目标构建时会导致启动即崩），改用 `NSCalendar` 标识，输出的 CLDR 标识与 iOS 17+ 保持一致
 * iOS: 写回非公历生日时可识别全部 CLDR 标识（如 `islamic-civil`、`roc`、`ethioaa`）及旧版 Swift case 名，修复这类历法在写回时丢失的问题
