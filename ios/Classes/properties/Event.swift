@@ -44,7 +44,7 @@ struct Event {
         leapMonth = lunar.isLeapMonth ?? false
         
         label = "birthday_lunar"
-        customLabel = (lunar.calendar?.identifier.debugDescription ?? "")
+        customLabel = calendarIdentifierString(lunar.calendar)
     }
 
     init(fromDate d: CNLabeledValue<NSDateComponents>) {
@@ -84,8 +84,8 @@ struct Event {
         }
 
         if label == "birthday_lunar" {
-            if let identifier = stringToIdentifier(customLabel) {
-              dateComponents.calendar = Calendar(identifier: identifier)
+            if let calendar = calendarFromIdentifierString(customLabel) {
+              dateComponents.calendar = calendar
               dateComponents.isLeapMonth = leapMonth
             }
             c.nonGregorianBirthday = dateComponents
@@ -112,24 +112,31 @@ struct Event {
         }
     }
 
-    // 从字符串转回 - 需要自己实现映射
-    func stringToIdentifier(_ string: String) -> Calendar.Identifier? {
-        switch string {
-            case "gregorian": return .gregorian
-            case "buddhist": return .buddhist
-            case "chinese": return .chinese
-            case "coptic": return .coptic
-            case "ethiopicAmeteMihret": return .ethiopicAmeteMihret
-            case "ethiopicAmeteAlem": return .ethiopicAmeteAlem
-            case "hebrew": return .hebrew
-            case "iso8601": return .iso8601
-            case "indian": return .indian
-            case "islamic": return .islamic
-            case "islamicCivil": return .islamicCivil
-            case "japanese": return .japanese
-            case "persian": return .persian
-            case "republicOfChina": return .republicOfChina
-            default: return nil
-        }
+    // Calendar.Identifier.debugDescription 在 iOS 15/16 的 Foundation 中不存在，
+    // 部署目标 15+ 启动时绑定会导致 dyld 直接终止，这里统一走 NSCalendar。
+    // 输出 CLDR 标识（与 iOS 17+ 的 debugDescription 一致），仅 NSCalendar 的
+    // ethiopic-amete-alem 需归一化为 ethioaa。
+    func calendarIdentifierString(_ calendar: Calendar?) -> String {
+        guard let calendar = calendar else { return "" }
+        let identifier = (calendar as NSCalendar).calendarIdentifier.rawValue
+        return identifier == "ethiopic-amete-alem" ? "ethioaa" : identifier
+    }
+
+    // NSCalendar 不识别 ethioaa 及旧版写入的 Swift case 名，先映射再构造。
+    func calendarFromIdentifierString(_ string: String) -> Calendar? {
+        let aliases = [
+            "ethioaa": "ethiopic-amete-alem",
+            "ethiopicAmeteMihret": "ethiopic",
+            "ethiopicAmeteAlem": "ethiopic-amete-alem",
+            "islamicCivil": "islamic-civil",
+            "islamicTabular": "islamic-tbla",
+            "islamicUmmAlQura": "islamic-umalqura",
+            "republicOfChina": "roc",
+        ]
+        let identifier = aliases[string] ?? string
+        guard !identifier.isEmpty,
+              let calendar = NSCalendar(identifier: NSCalendar.Identifier(rawValue: identifier))
+        else { return nil }
+        return calendar as Calendar
     }
 }
