@@ -5,10 +5,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_contacts/config.dart';
 import 'package:flutter_contacts/contact.dart';
 import 'package:flutter_contacts/diacritics.dart';
+import 'package:flutter_contacts/properties/container.dart';
 import 'package:flutter_contacts/properties/group.dart';
 
 export 'contact.dart';
 export 'properties/account.dart';
+export 'properties/container.dart';
 export 'properties/address.dart';
 export 'properties/email.dart';
 export 'properties/event.dart';
@@ -137,7 +139,12 @@ class FlutterContacts {
   /// the input can't have an ID, but the output will. If you intend to perform
   /// operations on the contact after creation, you should perform them on the
   /// output rather than on the input.
-  static Future<Contact> insertContact(Contact contact) async {
+  ///
+  /// On iOS, [containerId] selects the container to insert into (see
+  /// [getContainers]); when null the default container is used. Ignored on
+  /// other platforms.
+  static Future<Contact> insertContact(Contact contact,
+      {String? containerId}) async {
     // This avoids the accidental case where we want to update a contact but
     // insert it instead, which would result in two identical contacts.
     if (contact.id.isNotEmpty) {
@@ -149,6 +156,7 @@ class FlutterContacts {
     final json = await _channel.invokeMethod('insert', [
       contact.toJson(),
       config.includeNotesOnIos13AndAbove,
+      if (containerId != null) containerId,
     ]);
     return Contact.fromJson(Map<String, dynamic>.from(json));
   }
@@ -221,9 +229,25 @@ class FlutterContacts {
   }
 
   /// Inserts a new group (or label on Android).
-  static Future<Group> insertGroup(Group group) async {
-    return Group.fromJson(Map<String, dynamic>.from(
-        await _channel.invokeMethod('insertGroup', [group.toJson()])));
+  ///
+  /// On iOS, [containerId] selects the container to insert into (see
+  /// [getContainers]); when null the default container is used. Ignored on
+  /// other platforms.
+  static Future<Group> insertGroup(Group group, {String? containerId}) async {
+    return Group.fromJson(Map<String, dynamic>.from(await _channel
+        .invokeMethod('insertGroup', [
+      group.toJson(),
+      if (containerId != null) containerId,
+    ])));
+  }
+
+  /// Fetches all contact containers (iOS only, empty list on other platforms).
+  static Future<List<ContactContainer>> getContainers() async {
+    if (!Platform.isIOS) return [];
+    List untypedContainers = await _channel.invokeMethod('getContainers');
+    return untypedContainers
+        .map((x) => ContactContainer.fromJson(Map<String, dynamic>.from(x)))
+        .toList();
   }
 
   /// Updates a group (or label on Android).

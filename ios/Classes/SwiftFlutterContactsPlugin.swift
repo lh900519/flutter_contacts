@@ -167,6 +167,31 @@ public enum FlutterContacts {
         return containers
     }
 
+    // Returns all containers with their type and whether they are the default one.
+    static func getContainers() -> [[String: Any]] {
+        let store = CNContactStore()
+        let defaultId = store.defaultContainerIdentifier()
+        return fetchContainers(store).map { container in
+            let account = Account(fromContainer: container)
+            return [
+                "id": account.rawId,
+                "name": account.name,
+                "type": account.type,
+                "isDefault": container.identifier == defaultId,
+            ]
+        }
+    }
+
+    // Keeps the native error domain and code so callers can tell failures apart.
+    static func flutterError(_ error: Error) -> FlutterError {
+        let nsError = error as NSError
+        return FlutterError(
+            code: "\(nsError.domain):\(nsError.code)",
+            message: error.localizedDescription,
+            details: error.localizedDescription
+        )
+    }
+
     static func fetchContainerMemberships(_ store: CNContactStore, _ containers: [CNContainer]) -> [String: [Int]] {
         var memberships = [String: [Int]]()
         for (containerIndex, container) in containers.enumerated() {
@@ -190,14 +215,15 @@ public enum FlutterContacts {
     // Inserts a new contact into the database.
     static func insert(
         _ args: [String: Any?],
-        _ includeNotesOnIos13AndAbove: Bool
+        _ includeNotesOnIos13AndAbove: Bool,
+        _ containerId: String? = nil
     ) throws -> [String: Any?] {
         let contact = CNMutableContact()
 
         addFieldsToContact(args, contact, includeNotesOnIos13AndAbove)
 
         let saveRequest = CNSaveRequest()
-        saveRequest.add(contact, toContainerWithIdentifier: nil)
+        saveRequest.add(contact, toContainerWithIdentifier: containerId)
         try CNContactStore().execute(saveRequest)
         return Contact(fromContact: contact).toMap()
     }
@@ -313,13 +339,13 @@ public enum FlutterContacts {
         return groups.map { Group(fromGroup: $0).toMap() }
     }
 
-    static func insertGroup(_ args: [String: Any]) throws -> [String: Any] {
+    static func insertGroup(_ args: [String: Any], _ containerId: String? = nil) throws -> [String: Any] {
         let group = Group(fromMap: args)
         let newGroup = CNMutableGroup()
         newGroup.name = group.name
 
         let saveRequest = CNSaveRequest()
-        saveRequest.add(newGroup, toContainerWithIdentifier: nil)
+        saveRequest.add(newGroup, toContainerWithIdentifier: containerId)
         try CNContactStore().execute(saveRequest)
 
         return Group(fromGroup: newGroup).toMap()
@@ -512,17 +538,14 @@ public class SwiftFlutterContactsPlugin: NSObject,
                 let args = call.arguments as! [Any?]
                 let c = args[0] as! [String: Any?]
                 let includeNotesOnIos13AndAbove = args[1] as! Bool
+                let containerId = args.count > 2 ? args[2] as? String : nil
                 do {
                     let contact = try FlutterContacts.insert(
-                        c, includeNotesOnIos13AndAbove
+                        c, includeNotesOnIos13AndAbove, containerId
                     )
                     result(contact)
                 } catch {
-                    result(FlutterError(
-                        code: "unknown error",
-                        message: "unknown error",
-                        details: error.localizedDescription
-                    ))
+                    result(FlutterContacts.flutterError(error))
                 }
             }
         case "update":
@@ -537,11 +560,7 @@ public class SwiftFlutterContactsPlugin: NSObject,
                     )
                     result(contact)
                 } catch {
-                    result(FlutterError(
-                        code: "unknown error",
-                        message: "unknown error",
-                        details: error.localizedDescription
-                    ))
+                    result(FlutterContacts.flutterError(error))
                 }
             }
         case "delete":
@@ -550,12 +569,12 @@ public class SwiftFlutterContactsPlugin: NSObject,
                     try FlutterContacts.delete(call.arguments as! [String])
                     result(nil)
                 } catch {
-                    result(FlutterError(
-                        code: "unknown error",
-                        message: "unknown error",
-                        details: error.localizedDescription
-                    ))
+                    result(FlutterContacts.flutterError(error))
                 }
+            }
+        case "getContainers":
+            DispatchQueue.global(qos: .userInteractive).async {
+                result(FlutterContacts.getContainers())
             }
         case "getGroups":
             DispatchQueue.global(qos: .userInteractive).async {
@@ -563,11 +582,7 @@ public class SwiftFlutterContactsPlugin: NSObject,
                     let groups = try FlutterContacts.getGroups()
                     result(groups)
                 } catch {
-                    result(FlutterError(
-                        code: "unknown error",
-                        message: "unknown error",
-                        details: error.localizedDescription
-                    ))
+                    result(FlutterContacts.flutterError(error))
                 }
             }
         case "insertGroup":
@@ -575,14 +590,11 @@ public class SwiftFlutterContactsPlugin: NSObject,
                 do {
                     let args = call.arguments as! [Any?]
                     let g = args[0] as! [String: Any]
-                    let group = try FlutterContacts.insertGroup(g)
+                    let containerId = args.count > 1 ? args[1] as? String : nil
+                    let group = try FlutterContacts.insertGroup(g, containerId)
                     result(group)
                 } catch {
-                    result(FlutterError(
-                        code: "unknown error",
-                        message: "unknown error",
-                        details: error.localizedDescription
-                    ))
+                    result(FlutterContacts.flutterError(error))
                 }
             }
         case "updateGroup":
@@ -593,11 +605,7 @@ public class SwiftFlutterContactsPlugin: NSObject,
                     let group = try FlutterContacts.updateGroup(g)
                     result(group)
                 } catch {
-                    result(FlutterError(
-                        code: "unknown error",
-                        message: "unknown error",
-                        details: error.localizedDescription
-                    ))
+                    result(FlutterContacts.flutterError(error))
                 }
             }
         case "deleteGroup":
@@ -608,11 +616,7 @@ public class SwiftFlutterContactsPlugin: NSObject,
                     try FlutterContacts.deleteGroup(g)
                     result(nil)
                 } catch {
-                    result(FlutterError(
-                        code: "unknown error",
-                        message: "unknown error",
-                        details: error.localizedDescription
-                    ))
+                    result(FlutterContacts.flutterError(error))
                 }
             }
 
