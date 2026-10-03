@@ -1,3 +1,9 @@
+## 1.2.2
+
+* iOS: 新增 `FlutterContacts.getContainers()`，返回通讯录容器的 id、name、type、isDefault（非 iOS 返回空列表）
+* iOS: `insertContact`、`insertGroup` 支持可选参数 `containerId`，写入指定容器；不传时写入默认容器，行为与之前一致
+* iOS: 联系人与分组相关方法失败时，`PlatformException.code` 由 `unknown error` 改为原生错误的 `domain:code`（如 `CNErrorDomain:500`）
+
 ## 1.2.1
 
 * iOS: 读取非公历生日不再使用 `Calendar.Identifier.debugDescription`（iOS 15/16 的 Foundation 不提供该符号，以 iOS 15+ 为部署目标构建时会导致启动即崩），改用 `NSCalendar` 标识，输出的 CLDR 标识与 iOS 17+ 保持一致
